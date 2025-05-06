@@ -1,0 +1,83 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: sc09.yaml
+  - override /model: diffunet_complex.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["sc09", "diffunet_complex", "unconditional"]
+num_classes : 0
+audio_len: 128
+audio_frequency: 256
+seed: 12345
+sampler_steps: 50
+
+trainer:
+  min_epochs: 1600
+  max_epochs: 1600
+
+model:
+  spec_abs_exponent: 0.2
+  spec_factor: 0.6
+  use_ema: False
+  audio_sample_rate: 16000
+  generated_frame_length: ${audio_len}
+  generated_frequency: ${audio_frequency}
+  generated_sample_class: ${num_classes}
+  total_test_samples: 2048
+  ema_ckpt_path: /home/ge/AudioDiffuser/logs/saved_ckpts/EDM_ema/ema_snapshots/ema_prof_657000
+  n_fft: 510
+  hop_length: 128
+  optimizer:
+    lr: 4e-5
+  net:
+    _target_: src.models.backbones.unet2d.UNet2dBase
+    dim: 128
+    num_classes: ${num_classes}
+    dim_mults: [1, 2, 2, 2]
+    channels: 2
+    num_resnet_blocks: 2
+    resnet_groups: 8
+    layer_attns: [False, False, True, True]
+    layer_cross_attns: [False, False, True, True]
+    attn_heads: 2
+    ff_mult: 2.
+    memory_efficient: True
+  diffusion:
+    sigma_data : 0.2
+    dynamic_threshold : 0.0
+  noise_distribution:
+    mean : -1.0 
+    std : 1.2
+  sampler:
+    # _target_: src.models.components.sampler_edm.DPMSampler
+    # num_steps: ${sampler_steps}
+    # cond_scale: 1
+    # order: 3
+    # multisteps: True
+    # x0_pred: True
+    # log_time_spacing: False
+    _target_: src.models.components.sampler_edm.UniPCSampler
+    num_steps: ${sampler_steps}
+    cond_scale: 1
+    order: 2
+    x0_pred: False
+    log_time_spacing: False
+  noise_scheduler:
+    num_steps : ${sampler_steps}
+    sigma_min : 0.002
+    sigma_max : 80.0 
+    rho : 7.0
+
+data:
+  batch_size: 128
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "diffaudio-sc09-complex"

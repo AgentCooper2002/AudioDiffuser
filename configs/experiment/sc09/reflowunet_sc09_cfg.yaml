@@ -1,0 +1,69 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: sc09.yaml
+  - override /model: reflowunet.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["sc09", "reflow", "conditional"]
+num_classes : 10
+audio_len: 16384
+seed: 12345
+
+trainer:
+  min_epochs: 200
+  max_epochs: 200
+
+model:
+  use_ema: False
+  audio_sample_rate: 16000
+  generated_sample_length: ${audio_len}
+  generated_sample_class: ${num_classes}
+  optimizer:
+    lr: 1e-4
+  net:
+    _target_: src.models.backbones.unet1d.UNet1dBase
+    num_classes: ${num_classes}
+    class_cond: True
+    cond_drop_prob: 0.1
+    stride: 2
+    num_filters: 128
+    window_length: 8
+    use_nearest_upsample: False
+    channels : 128
+    in_channels: 1
+    resnet_groups : 8
+    kernel_multiplier_downsample : 2
+    multipliers : [1,2,2,4,4,4,4]
+    factors : [2,2,2,4,4,4]
+    num_blocks : [2,2,2,2,2,2]
+    attentions : [False,False,False,True,True,True]
+    attention_heads : 8
+    attention_multiplier : 2
+    use_skip_scale : True
+    use_attention_bottleneck : True
+    use_condition_block: False
+  reflow:
+    ln: True
+    stratified: False
+  sampler:
+    _target_: src.models.components.sampler.ReFlowSampler
+    num_steps: 50
+    cond_scale: 2.0
+  noise_scheduler:
+    num_steps : 50
+    start: 1.0
+
+data:
+  batch_size: 64
+  audio_len: ${audio_len}
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "diffaudio-sc09-complex"

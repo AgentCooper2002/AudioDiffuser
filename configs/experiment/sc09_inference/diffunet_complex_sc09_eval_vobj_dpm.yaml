@@ -1,0 +1,86 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: sc09.yaml
+  - override /model: diffunet_complex.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["sc09", "diffunet_complex", "unconditional"]
+num_classes : 0
+audio_len: 128
+audio_frequency: 256
+seed: 12345
+sampler_steps: 30
+
+trainer:
+  min_epochs: 1600
+  max_epochs: 1600
+
+model:
+  spec_abs_exponent: 0.2
+  spec_factor: 0.6
+  audio_sample_rate: 16000
+  generated_frame_length: ${audio_len}
+  generated_frequency: ${audio_frequency}
+  generated_sample_class: ${num_classes}
+  n_fft: 510
+  hop_length: 128
+  total_test_samples: 2048
+  optimizer:
+    lr: 4e-5
+  net:
+    _target_: src.models.backbones.unet2d.UNet2dBase
+    dim: 128
+    dim_mults: [1, 2, 2, 2]
+    channels: 2
+    num_resnet_blocks: 2
+    resnet_groups: 8
+    layer_attns: [False, False, True, True]
+    layer_cross_attns: [False, False, True, True]
+    attn_heads: 2
+    ff_mult: 2.
+    memory_efficient: True
+  diffusion:
+    _target_: src.models.components.diffusion.VDiffusion
+  noise_distribution:
+    _target_: src.models.components.distribution.UniformDistribution
+    vmin: 0.00001
+    vmax: 1.0
+  sampler:
+    # _target_: src.models.components.sampler_vobj.UniPCSampler
+    # num_steps: ${sampler_steps}
+    # cond_scale: 1
+    # order: 2
+    # x0_pred: True
+    _target_: src.models.components.sampler_vobj.DPMSampler
+    num_steps: ${sampler_steps}
+    cond_scale: 1
+    order: 3
+    multisteps: False
+    x0_pred: False
+  noise_scheduler:
+    _target_: src.models.components.scheduler.LinearSchedule
+    start: 1.0
+    end: 0.0
+    num_steps: ${sampler_steps}
+
+data:
+  batch_size: 32
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "diffaudio-sc09-complex"
+
+callbacks:
+  model_checkpoint:
+    dirpath: ${paths.output_dir}/checkpoints
+    filename: "epoch_{epoch:03d}"
+    every_n_epochs: 50
+    monitor: "val/loss"
+    save_last: True

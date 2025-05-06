@@ -1,0 +1,29 @@
+_target_: src.models.diffunet_complex_module.DiffUnetComplexModule
+spec_abs_exponent: 0.5
+spec_factor: 0.3
+use_ema: False
+generated_frame_length: 256
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 1e-4
+  betas : [0.9, 0.999]
+  weight_decay: 0.01
+  
+scheduler: null
+
+net:
+  _target_: src.models.backbones.unet2d.BaseUnet
+
+diffusion:
+  _target_: src.models.components.diffusion.EluDiffusion
+  
+sampler:
+  _target_: src.models.components.stochastic_sampler_edm.ADPM2Sampler
+
+noise_distribution:
+  _target_: src.models.components.distribution.LogNormalDistribution
+
+noise_scheduler:
+  _target_: src.models.components.scheduler.KarrasSchedule
