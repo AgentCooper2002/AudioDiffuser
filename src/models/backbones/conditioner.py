@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-from einops import rearrange, repeat
+from einops import rearrange
 from .operator_utils import prob_mask_like
 from .utils import exists
 import torch.nn.functional as F
